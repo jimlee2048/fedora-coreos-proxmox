@@ -10,19 +10,38 @@ set -e
 export LANG=C
 export LC_ALL=C
 
-# template vm vars
-TEMPLATE_VMID="900"
-TEMPLATE_VMSTORAGE="local"
-SNIPPET_STORAGE="local"
-VMDISK_OPTIONS=",discard=on"
+declare CONFIG_FILE=template_deploy.conf
 
-TEMPLATE_IGNITION="fcos-base-tmplt.yaml"
+if [[ ! -f "${CONFIG_FILE}" ]] ;then
+        echo "ERROR: File ${CONFIG_FILE} doesn't exists"
+        exit 1
+else
+        source ${CONFIG_FILE}
+fi
 
-# fcos version
-STREAMS=stable
-VERSION=36.20220618.3.1
-PLATEFORM=qemu
-BASEURL=https://builds.coreos.fedoraproject.org
+TEMPLATE_NAME_FULL="${TEMPLATE_NAME}-${VERSION}"
+
+if [[ -f ${TEMPLATE_NAME_FULL}.id ]] && [[ ${TEMPLATE_RECREATE} != true ]];then
+        echo "${TEMPLATE_NAME_FULL} exists. Recreating not asked."
+        sleep 2
+        TEMPLATE_VMID=$(cat ./${TEMPLATE_NAME_FULL}.id)
+        TEMPLATE_CREATE="false"
+elif [[ ! -f ${TEMPLATE_NAME_FULL}.id ]];then
+        echo "${TEMPLATE_VMID}" > ${TEMPLATE_NAME_FULL}.id
+        TEMPLATE_CREATE="true"
+elif [[ -f ${TEMPLATE_NAME_FULL}.id ]] && [[ ${TEMPLATE_RECREATE} == true ]];then
+        echo "${TEMPLATE_NAME_FULL} exists. Recreating asked !!"
+        TEMPLATE_VMID=$(cat ./${TEMPLATE_NAME_FULL}.id)
+        qm destroy ${TEMPLATE_VMID} --purge
+        rm ./${TEMPLATE_NAME_FULL}.id
+        sleep 3
+        TEMPLATE_VMID=$(pvesh get /cluster/nextid)
+        echo "${TEMPLATE_VMID}" > ${TEMPLATE_NAME_FULL}.id
+        TEMPLATE_CREATE="true"
+else
+#write Template VM_ID in a file.
+        TEMPLATE_CREATE="false"
+fi
 
 # =============================================================================================
 # main()
@@ -77,13 +96,13 @@ esac
 
 # create a new VM
 echo "Create fedora coreos vm ${VMID}"
-qm create ${TEMPLATE_VMID} --name fcos-tmplt
-qm set ${TEMPLATE_VMID} --memory 4096 \
-			--cpu host \
-			--cores 4 \
+qm create ${TEMPLATE_VMID} --name ${TEMPLATE_NAME_FULL}
+qm set ${TEMPLATE_VMID} --memory ${TEMPLATE_MEMORY} \
+			--cpu ${TEMPLATE_CPU_TYPE} \
+			--cores ${TEMPLATE_CPU_CORE} \
 			--agent enabled=1 \
-			--autostart \
-			--onboot 1 \
+			--autostart ${TEMPLATE_AUTOSTAR} \
+			--onboot ${TEMPLATE_ONBOOT} \
 			--ostype l26 \
 			--tablet 0 \
 			--boot c --bootdisk scsi0

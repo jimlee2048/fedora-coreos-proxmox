@@ -7,12 +7,7 @@
           
           OUT=/run/motd.d/22_geco.motd
           
-          echo -e "\nWelcome on a server powered by\n" > ${OUT}
-          echo -e '\e[33m    ______                      _ ______' >> ${OUT}
-          echo -e '\e[33m   / ____/__  _________        (_)_  __/' >> ${OUT}
-          echo -e '\e[33m  / / __/ _ \/ ___/ __ \  __   / / / /' >> ${OUT}
-          echo -e '\e[33m / /_/ /  __/ /__/ /_/ / |__| / / / /' >> ${OUT}
-          echo -e '\e[33m \____/\___/\___/\____/      /_/ /_/\n\n' >> ${OUT}
+          echo -e "\nWelcome this server\n" > ${OUT}
           eval "$(grep -E "^(NAME=|VARIANT=)" /etc/os-release)" && echo -e "\e[33mOperating System:\e[0m ${NAME} ${VARIANT}" >> ${OUT}
           eval "$(grep ^OSTREE_VERSION /etc/os-release)" && echo -e "\e[33mVersion:\e[0m ${OSTREE_VERSION}" >> ${OUT}
           echo -e "\e[33mKernel:\e[0m $(uname -r)" >> ${OUT}
@@ -266,15 +261,8 @@
       contents:
         inline: |
 
-          Welcome on a server powered by
-
-            ,----.                                   ,--. ,--------.
-           '  .-./     ,---.   ,---.  ,---.  ,-----. `--' '--.  .--'
-           |  | .---. | .-. : | .--' | .-. | '-----' ,--.    |  |
-           '  '--'  | \\   --. \\ `--. ' '-' '         |  |    |  |
-            `------'   `----'  `---'  `---'          `--'    `--'
-            
-          .
+          Welcome this server
+          
 
 # kernel config
     - path: /etc/sysctl.d/20-silence-audit.conf
