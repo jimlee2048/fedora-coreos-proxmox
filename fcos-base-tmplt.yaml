@@ -5,7 +5,7 @@
         inline: |
           #!/bin/bash
           
-          OUT=/etc/console-login-helper-messages/motd.d/22_geco.motd
+          OUT=/run/motd.d/22_geco.motd
           
           echo -e "\nWelcome on a server powered by\n" > ${OUT}
           echo -e '\e[33m    ______                      _ ______' >> ${OUT}
@@ -329,6 +329,7 @@ systemd:
       contents: |
         [Unit]
         Description=Geco-iT Setup Qemu Guest Agent
+        Before=boot-complete.target
         After=network-online.target
         Require=network-online.target
         ConditionKernelCommandLine=ignition.platform.id=qemu
