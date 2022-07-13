@@ -95,50 +95,63 @@ esac
 }
 
 # create a new VM
-echo "Create fedora coreos vm ${VMID}"
-qm create ${TEMPLATE_VMID} --name ${TEMPLATE_NAME_FULL}
-qm set ${TEMPLATE_VMID} --memory ${TEMPLATE_MEMORY} \
-			--cpu ${TEMPLATE_CPU_TYPE} \
-			--cores ${TEMPLATE_CPU_CORE} \
-			--agent enabled=1 \
-			--autostart ${TEMPLATE_AUTOSTAR} \
-			--onboot ${TEMPLATE_ONBOOT} \
-			--ostype l26 \
-			--tablet 0 \
-			--boot c --bootdisk scsi0
+if [[ ${TEMPLATE_CREATE} == "true" ]];then
+        echo "Create fedora coreos vm ${VMID}"
+        qm create ${TEMPLATE_VMID} --name ${TEMPLATE_NAME_FULL}
+        qm set ${TEMPLATE_VMID} --memory ${TEMPLATE_MEMORY} \
+                                --cpu ${TEMPLATE_CPU_TYPE} \
+                                --cores ${TEMPLATE_CPU_CORE} \
+                                --agent enabled=1 \
+                                --autostart ${TEMPLATE_AUTOSTAR} \
+                                --onboot ${TEMPLATE_ONBOOT} \
+                                --ostype l26 \
+                                --tablet 0 \
+                                --boot c --bootdisk scsi0
 
-template_vmcreated=$(date +%Y-%m-%d)
-qm set ${TEMPLATE_VMID} --description "Fedora CoreOS - Geco-iT Template
+        template_vmcreated=$(date +%Y-%m-%d)
+        qm set ${TEMPLATE_VMID} --description "Fedora CoreOS - Geco-iT Template
 
- - Version             : ${VERSION}
- - Cloud-init          : true
+        - Version             : ${VERSION}
+        - Cloud-init          : true
 
-Creation date : ${template_vmcreated}
-"
+        Creation date : ${template_vmcreated}
+        "
 
-qm set ${TEMPLATE_VMID} --net0 virtio,bridge=vmbr0
-#qm set ${TEMPLATE_VMID} --net1 virtio,bridge=vmbr1
+        qm set ${TEMPLATE_VMID} --net0 virtio,bridge=vmbr0
+        #qm set ${TEMPLATE_VMID} --net1 virtio,bridge=vmbr1
 
-echo -e "\nCreate Cloud-init vmdisk..."
-qm set ${TEMPLATE_VMID} --ide2 ${TEMPLATE_VMSTORAGE}:cloudinit
+        echo -e "\nCreate Cloud-init vmdisk..."
+        qm set ${TEMPLATE_VMID} --ide2 ${TEMPLATE_VMSTORAGE}:cloudinit
 
-# import fedora disk
-if [[ "x${TEMPLATE_VMSTORAGE_type}" = "xfile" ]]
-then
-	vmdisk_name="${TEMPLATE_VMID}/vm-${TEMPLATE_VMID}-disk-0.qcow2"
-	vmdisk_format="--format qcow2"
-else
-	vmdisk_name="vm-${TEMPLATE_VMID}-disk-0"
-        vmdisk_format=""
+        # import fedora disk
+        if [[ "x${TEMPLATE_VMSTORAGE_type}" = "xfile" ]]
+        then
+                vmdisk_name="${TEMPLATE_VMID}/vm-${TEMPLATE_VMID}-disk-0.qcow2"
+                vmdisk_format="--format qcow2"
+        else
+                vmdisk_name="vm-${TEMPLATE_VMID}-disk-0"
+                vmdisk_format=""
+        fi
+        qm importdisk ${TEMPLATE_VMID} fedora-coreos-${VERSION}-${PLATEFORM}.x86_64.qcow2 ${TEMPLATE_VMSTORAGE} ${vmdisk_format}
+        qm set ${TEMPLATE_VMID} --scsihw virtio-scsi-pci --scsi0 ${TEMPLATE_VMSTORAGE}:${vmdisk_name}${VMDISK_OPTIONS}
+
+        # set hook-script
+        qm set ${TEMPLATE_VMID} -hookscript ${SNIPPET_STORAGE}:snippets/hook-fcos.sh
+
+
+        # convert vm template
+        echo -n "Convert VM ${TEMPLATE_VMID} in proxmox vm template... "
+        qm template ${TEMPLATE_VMID} &> /dev/null || true
+        echo "[done]"
 fi
-qm importdisk ${TEMPLATE_VMID} fedora-coreos-${VERSION}-${PLATEFORM}.x86_64.qcow2 ${TEMPLATE_VMSTORAGE} ${vmdisk_format}
-qm set ${TEMPLATE_VMID} --scsihw virtio-scsi-pci --scsi0 ${TEMPLATE_VMSTORAGE}:${vmdisk_name}${VMDISK_OPTIONS}
-
-# set hook-script
-qm set ${TEMPLATE_VMID} -hookscript ${SNIPPET_STORAGE}:snippets/hook-fcos.sh
-
-
-# convert vm template
-echo -n "Convert VM ${TEMPLATE_VMID} in proxmox vm template... "
-qm template ${TEMPLATE_VMID} &> /dev/null || true
-echo "[done]"
+echo
+echo
+if [[ ${TEMPLATE_CREATE} == "true" ]] && [[ ${TEMPLATE_RECREATE} == "false" ]];then
+        echo "SUCCESS: ${TEMPLATE_NAME_FULL}  with ID: ${TEMPLATE_VMID} created on \"${TEMPLATE_VMSTORAGE}\" storage"
+elif [[ ${TEMPLATE_CREATE} == "true" ]] && [[ ${TEMPLATE_CREATE} == "true" ]];then
+        echo "SUCCESS: ${TEMPLATE_NAME_FULL}  with ID: ${TEMPLATE_VMID} Re-created on \"${TEMPLATE_VMSTORAGE}\" storage"
+elif [[ ${TEMPLATE_CREATE} == "false" ]];then
+        echo "SUCCESS: ${TEMPLATE_NAME_FULL} with ID: ${TEMPLATE_VMID} updated"
+fi
+echo
+echo
