@@ -3,7 +3,7 @@ fedora-coreos-proxmox
 
 ## About
 This is a fork from https://git.geco-it.net/GECO-IT-PUBLIC/fedora-coreos-proxmox.git, it has the modified as below:
-- Fixed: the problem of `geco-motd` and `qemu-ga` in the setup of latest FCOS, according to this [post](https://forum.proxmox.com/threads/howto-wrapper-script-to-use-fedora-coreos-ignition-with-proxmox-cloud-init-system-for-docker-workloads.86494/post-463507)
+- Fixed: the problem of `geco-motd` and `qemu-ga` during the setup of latest FCOS, according to this [post](https://forum.proxmox.com/threads/howto-wrapper-script-to-use-fedora-coreos-ignition-with-proxmox-cloud-init-system-for-docker-workloads.86494/post-463507)
 - Feature: additional custom config of Template VM base on the modifies of [Doc-Tiebeau/proxmox-flatcar](https://github.com/Doc-Tiebeau/proxmox-flatcar)
 - Feature: allow adding custom packages repo
 
@@ -52,7 +52,7 @@ This is a fork from https://git.geco-it.net/GECO-IT-PUBLIC/fedora-coreos-proxmox
 
     # fcos image version
     STREAMS=stable # The stream you decide to use
-    VERSION=36.20220618.3.1 # You need to bump it to latest version manually
+    VERSION=36.20220618.3.1 # You need to bump it to the latest version manually
     PLATEFORM=qemu
     BASEURL=https://builds.coreos.fedoraproject.org
     ```
