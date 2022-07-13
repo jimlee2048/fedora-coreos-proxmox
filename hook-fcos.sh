@@ -123,6 +123,26 @@ then
 	done
 	echo "[done]"
 
+	echo -n "Fedora CoreOS: Adding custom packages repos..."
+	pkgs_repo=(
+		"https://pkgs.tailscale.com/stable/fedora/tailscale.repo"
+		"https://download.docker.com/linux/fedora/docker-ce.repo"
+	)
+	for i in ${pkgs_repo[@]}
+	do
+		repo_url=$i
+		repo_filename=${i##*/}
+		repo_content=$(curl -L ${repo_url})
+		echo "    - path: /etc/yum.repos.d/${repo_filename}" >> ${COREOS_FILES_PATH}/${vmid}.yaml
+		echo "      mode: 0644" >> ${COREOS_FILES_PATH}/${vmid}.yaml
+		echo "      contents:" >> ${COREOS_FILES_PATH}/${vmid}.yaml
+		echo "        inline: |" >> ${COREOS_FILES_PATH}/${vmid}.yaml
+		while read -r line
+		do
+			echo "          $line" >> ${COREOS_FILES_PATH}/${vmid}.yaml
+		done <<< ${repo_content}
+	done
+
 	[[ -e "${COREOS_TMPLT}" ]]&& {
 		echo -n "Fedora CoreOS: Generate other block based on template... "
 		cat "${COREOS_TMPLT}" >> ${COREOS_FILES_PATH}/${vmid}.yaml
