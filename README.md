@@ -1,92 +1,95 @@
-# fedora-coreos-proxmox
+fedora-coreos-proxmox
+===
 
-Fedora CoreOS template for proxmox with cloudinit support
+## About
+This is a fork from https://git.geco-it.net/GECO-IT-PUBLIC/fedora-coreos-proxmox.git, it has the modified as below:
+- Fixed: the problem of `geco-motd` and `qemu-ga` in the setup of latest FCOS, according to this [post](https://forum.proxmox.com/threads/howto-wrapper-script-to-use-fedora-coreos-ignition-with-proxmox-cloud-init-system-for-docker-workloads.86494/post-463507)
+- Feature: additional custom config of Template VM base on the modifies of [Doc-Tiebeau/proxmox-flatcar](https://github.com/Doc-Tiebeau/proxmox-flatcar)
+- Feature: allow adding custom packages repo
 
-## Create FCOS VM Template
+## How To
 
-### Configuration
+1.  Be sure to install `git` on your PVE server first:
 
-* **vmsetup.sh**
+    ```shell
+    apt update
+    apt install git
+    ```
 
-```
-TEMPLATE_VMID="1000"                     # Template Proxmox VMID 
-TEMPLATE_VMSTORAGE="thin-ssd"           # Proxmox storage  
-SNIPPET_STORAGE="local"                 # Snippets storage for hook and ignition file
-VMDISK_OPTIONS=",discard=on"            # Add options to vmdisk
-```
+2.  Clone this repository on your Proxmox server:
 
-* **fcos-base-tmplt.yaml**
+    ```shell
+    git clone https://github.com/jimlee2002/fedora-coreos-proxmox.git
+    ```
 
-The ignition file provided is only a working basis.
-For a more advanced configuration go to https://docs.fedoraproject.org/en-US/fedora-coreos/
+3.  Get into the directory `fedora-coreos-proxmox`
 
-it contains :
+    ```shell
+    cd fedora-coreos-proxmox
+    ```
 
-* Correct fstrim service with no fstab file
-* Install qemu-guest-agent on first boot
-* Install Geco-iT CloudInit wrapper
-* Raise console message logging level from DEBUG (7) to WARNING (4)
-* Add Geco-iT motd/issue
+4.  Modify `template_deploy.conf` to custom your VM parameter as below:
 
-### Script output
-```
-root@vc0:/opt/fcos-tmplt# ./vmsetup.sh 
-Check if vm storage thin-ssd exist... [ok]
-Check if snippet storage local exist... [ok]
-Copy hook-script and ignition config to snippet storage...
-'fcos-base-tmplt.yaml' -> '/var/lib/vz/snippets/fcos-base-tmplt.yaml'
-'hook-fcos.sh' -> '/var/lib/vz/snippets/hook-fcos.sh'
-Get storage "thin-ssd" type... [block]
-Download fedora coreos...
-fedora-coreos-32.20201018.3.0-qemu.x86_64.qcow2.xz  100%[=================>] 524.11M  59.8MB/s    in 8.5s    
-fedora-coreos-32.20201018.3.0-qemu.x86_64.qcow2.xz (1/1)
-  100 %      524.1 MiB / 1779.8 MiB = 0.294    55 MiB/s       0:32             
-Create fedora coreos vm 
-update VM 900: -agent enabled=1 -autostart 1 -boot c -bootdisk scsi0 -cores 4 -cpu host -memory 4096 -onboot 1 -ostype l26 -tablet 0
-update VM 900: -description Fedora CoreOS - Geco-iT Template
+    ```
+    # template vm vars
+    TEMPLATE_NAME="TMPLT-fcos" # Template VM name append with <flactar_version> in Proxmox GUI
+    TEMPLATE_RECREATE="false" # Fore recreate template ?
+    # Note: If you want only update hook script and Template_Ignition file, you can keep it as false, these files are always overwritten
+    TEMPLATE_VMID="900" # VMID of Template VM
+    TEMPLATE_VMSTORAGE="local-lvm" # Target storage for template VM
+    SNIPPET_STORAGE="local" # Target storage for snippets files
+    VMDISK_OPTIONS=",discard=on"
 
- - Version             : 32.20201018.3.0
- - Cloud-init          : true
+    TEMPLATE_MEMORY="4096" # Amount of RAM for the template VM in MB
+    TEMPLATE_CPU_TYPE="host" # Emulated CPU type
+    TEMPLATE_CPU_CORE="4" # The number of cores for template VM
+    # 0-False, 1-True
+    TEMPLATE_AUTOSTART="1" # Whether the VM will be automatic restart after crash
+    TEMPLATE_ONBOOT="0" # Whether the VM will be started during system bootup.
 
-Creation date : 2020-11-26
 
-update VM 900: -net0 virtio,bridge=vmbr0
+    TEMPLATE_IGNITION="fcos-base-tmplt.yaml"
 
-Create Cloud-init vmdisk...
-update VM 900: -ide2 thin-ssd:cloudinit
-importing disk 'fedora-coreos-32.20201018.3.0-qemu.x86_64.qcow2' to VM 900 ...
-transferred: 0 bytes remaining: 8589934592 bytes total: 8589934592 bytes progression: 0.00 %
-transferred: 91053306 bytes remaining: 8498881286 bytes total: 8589934592 bytes progression: 1.06 %
-transferred: 178670639 bytes remaining: 8411263953 bytes total: 8589934592 bytes progression: 2.08 %
-...
-transferred: 8589934592 bytes remaining: 0 bytes total: 8589934592 bytes progression: 100.00 %
-Successfully imported disk as 'unused0:thin-ssd:vm-900-disk-0'
-update VM 900: -scsi0 thin-ssd:vm-900-disk-0,discard=on -scsihw virtio-scsi-pci
-update VM 900: -hookscript local:snippets/hook-fcos.sh
-Convert VM 900 in proxmox vm template... [done]
-```
+    # fcos image version
+    STREAMS=stable # The stream you decide to use
+    VERSION=36.20220618.3.1 # You need to bump it to latest version manually
+    PLATEFORM=qemu
+    BASEURL=https://builds.coreos.fedoraproject.org
+    ```
 
-## Operation
+5.  Add your custom packages repo in `hook-fcos.sh` as below:
 
-Before starting an FCOS VM, we create an ignition file by merging the data from the cloudinit and the fcos-base-tmplt.yaml file.
-Then we modify the configuration of the vm to add the loading of the ignition file and we reset the start of the vm.
+    ```shell
+    (...)
 
-<p align="center">
-  <img src="./screenshot/fcos_proxmox_first_start.png" alt="">
-</p>
+        echo -n "Fedora CoreOS: Adding custom packages repos..."
+        pkgs_repo=(
+            # Put the URL of custom packages repo here
+            "https://pkgs.tailscale.com/stable/fedora/tailscale.repo"
+            "https://download.docker.com/linux/fedora/docker-ce.repo"
+        )
+        
+    (...)
+    ```
 
-During the first boot the vm will install qemu-agent and will restart.
-Warning, for that the network must be operational
+6.  Run the scripts to generate the template VM:
 
-## CloudInit
+    ```shell
+    ./vmsetup.sh
+    ```
 
-Only these parameters are supported by our cloudinit wrapper:
+7.  Check the template VM just generated in Proxmox Web GUI and clone a VM base on it.
 
-* User (only one) default = admin
-* Passwd
-* DNS domain
-* DNS Servers
-* SSH public key
-* IP Configuration (ipv4 only)
 
-The settings are applied at boot
+8.  BEFORE first boot: update Cloud-Init config of your new VM in Proxmox Web GUI.
+    > Without specifying, the default username is `admin`
+
+9.  Wait for multiple reboot the enjoy.
+
+
+## Credits
+
+- [GECO-IT-PUBLIC/fedora-coreos-proxmox](https://git.geco-it.net/GECO-IT-PUBLIC/fedora-coreos-proxmox.git)
+- [Doc-Tiebeau/proxmox-flatcar](https://github.com/Doc-Tiebeau/proxmox-flatcar)
+- [Proxmox VE - Fedora CoreOS : Un mariage presque parfait / An almost perfect Union [Geco-iT Wiki]](https://wiki.geco-it.net/public:pve_fcos)
+- [[TUTORIAL] - HOWTO : Wrapper Script to Use Fedora CoreOS Ignition with Proxmox cloud-init system for Docker workloads | Proxmox Support Forum](https://forum.proxmox.com/threads/howto-wrapper-script-to-use-fedora-coreos-ignition-with-proxmox-cloud-init-system-for-docker-workloads.86494)

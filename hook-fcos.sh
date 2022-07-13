@@ -125,6 +125,7 @@ then
 
 	echo -n "Fedora CoreOS: Adding custom packages repos..."
 	pkgs_repo=(
+		# Put the URL of custom packages repo here
 		"https://pkgs.tailscale.com/stable/fedora/tailscale.repo"
 		"https://download.docker.com/linux/fedora/docker-ce.repo"
 	)
